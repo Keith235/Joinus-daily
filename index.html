@@ -103,10 +103,10 @@ body.is-mobile #entry,body.is-mobile .pc{display:none}
 .lookup-card,.m-edu-card,.submit-card,.att-list{padding:18px}
 .lookup-card h2,.submit-card h3,.att-list h3,.m-edu-content h3,.m-sec-h h2{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em}
 .lookup-card p,.submit-card p{margin:8px 0 0;font-size:14px;color:#475569;line-height:1.6}
-.lookup-row{display:flex;gap:10px;margin-top:14px;align-items:stretch;flex-wrap:nowrap}
+.lookup-row{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:nowrap;overflow:hidden}
 .lookup-row input,.lookup-row button,.f-group input[type="text"],.btn-submit{min-height:46px;border-radius:12px}
-.lookup-row input,.f-group input[type="text"]{flex:1;padding:0 14px;background:#fff;border:1px solid var(--line-strong)}
-.lookup-row button{padding:0 16px;border:0;background:var(--joinus-navy);color:#fff;font-weight:700;white-space:nowrap;flex:0 0 auto;min-width:84px;font-family:'Noto Sans KR',sans-serif;font-size:15px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;letter-spacing:.02em}
+.lookup-row input,.f-group input[type="text"]{flex:1;min-width:0;padding:0 14px;background:#fff;border:1px solid var(--line-strong);font-family:'Noto Sans KR',sans-serif;font-size:15px}
+.lookup-row button{padding:0 18px;border:0;background:var(--joinus-navy);color:#fff;font-weight:700;white-space:nowrap;flex:0 0 72px;width:72px;max-width:72px;font-family:'Noto Sans KR',sans-serif;font-size:15px;display:flex;align-items:center;justify-content:center;border-radius:12px;letter-spacing:.02em;box-sizing:border-box;overflow:hidden}
 .result{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-strong);display:none}
 .result.show{display:block}
 .result .greet{
@@ -533,6 +533,7 @@ body.is-pc{font-size:14px}
     <button class="m-tab active" data-mtab="me">내 업무</button>
     <button class="m-tab" data-mtab="plan">계획표</button>
     <button class="m-tab" data-mtab="edu">교육</button>
+    <button class="m-tab" data-mtab="ref">레퍼런스</button>
   </div>
 
   <div class="m-main">
@@ -664,6 +665,19 @@ body.is-pc{font-size:14px}
         // 제출 후 교육기록서에 자동으로 등재됩니다.<br>
         // © JOINUS Co., Ltd.
       </div>
+    </section>
+
+    <!-- 레퍼런스 -->
+    <section class="m-view" id="m-view-ref">
+      <div class="lookup-card">
+        <h2>📷 레퍼런스</h2>
+        <p>관리자·작업자가 올린 참고 사진입니다. 사진을 추가하면 모두가 확인할 수 있습니다.</p>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <label for="mRefUpload" style="display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--line-strong);background:#fff;font-weight:700;font-size:14px;cursor:pointer">📷 사진 추가</label>
+          <input id="mRefUpload" type="file" accept="image/*" multiple style="display:none">
+        </div>
+      </div>
+      <div id="mReferenceWrap" style="margin-top:12px"></div>
     </section>
 
   </div>
@@ -866,6 +880,8 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxaiW8oFyzrPR0VYYNnn
 async function loadData(){
   if(!SCRIPT_URL || SCRIPT_URL.indexOf('YOUR_') === 0){
     console.warn('SCRIPT_URL이 설정되지 않았습니다. 기본 데이터로 동작합니다.');
+    // 로컬 레퍼런스 복원
+    try{ DATA.references = JSON.parse(localStorage.getItem('joinus_ref_data') || '[]'); }catch(_){ DATA.references = []; }
     return;
   }
   try{
@@ -891,6 +907,8 @@ function mergeData(loaded){
   m.edu.attendees = m.edu.attendees.map(a => typeof a==='string' ? {role:'OP', name:a, sig:''} : a);
   if(!Array.isArray(m.assigned)) m.assigned = DEFAULT_DATA.assigned;
   return m;
+  // 로컬 레퍼런스 복원 (서버에는 저장 안 됨)
+  try{ DATA.references = JSON.parse(localStorage.getItem('joinus_ref_data') || '[]'); }catch(_){ if(!DATA.references) DATA.references = []; }
 }
 async function saveData(){
   if(!SCRIPT_URL || SCRIPT_URL.indexOf('YOUR_') === 0){
@@ -902,7 +920,13 @@ async function saveData(){
   try{
     const res = await fetch(SCRIPT_URL, {
       method:'POST',
-      body: JSON.stringify({action:'save', data:DATA})
+      body: (() => {
+          // 레퍼런스는 용량이 커서 로컬에 별도 저장
+          try{ localStorage.setItem('joinus_ref_data', JSON.stringify(DATA.references || [])); }catch(_){}
+          const sendData = Object.assign({}, DATA);
+          delete sendData.references; // 서버에는 사진 빼고 전송
+          return JSON.stringify({action:'save', data:sendData});
+        })()
     });
     const json = await res.json();
     if(json.ok) setStatus('저장됨 · ' + new Date().toLocaleTimeString('ko-KR'));
@@ -1040,6 +1064,47 @@ function renderReferencesMobile(){
   const refs = Array.isArray(DATA.references) ? DATA.references : [];
   wrap.innerHTML = refs.length ? `<div class="m-ref-grid">${refs.map((r,i)=>`<div class="m-ref-card"><img src="${r.data}" alt="reference-${i+1}"><div class="cap">${escape(r.name || `레퍼런스 ${i+1}`)}</div></div>`).join('')}</div>` : '<div class="ref-empty">등록된 레퍼런스 사진이 없습니다.</div>';
 }
+
+/* ============ MOBILE REFERENCE UPLOAD ============ */
+document.getElementById('mRefUpload')?.addEventListener('change', async e=>{
+  const files = Array.from(e.target.files);
+  if(!files.length) return;
+  if(!Array.isArray(DATA.references)) DATA.references = [];
+  for(const file of files){
+    try{
+      const dataURL = await new Promise((ok,fail)=>{
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          // 이미지 리사이즈 (최대 1200px)
+          const img = new Image();
+          img.onload = ()=>{
+            const MAX = 1200;
+            let w = img.width, h = img.height;
+            if(w > MAX || h > MAX){
+              if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
+              else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            ok(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.onerror = fail;
+          img.src = reader.result;
+        };
+        reader.onerror = fail;
+        reader.readAsDataURL(file);
+      });
+      DATA.references.push({data: dataURL, name: file.name, by: 'worker', ts: Date.now()});
+    }catch(_){}
+  }
+  renderReferencesMobile();
+  renderReferenceAdmin();
+  // 로컬에도 저장
+  try{ localStorage.setItem('joinus_ref_backup', JSON.stringify(DATA.references)); }catch(_){}
+  setStatus('레퍼런스 추가됨 · 저장 필요', 'dirty');
+  e.target.value = '';
+});
 
 /* ============ MOBILE TABS ============ */
 document.querySelectorAll('.m-tab').forEach(t=>{
