@@ -85,9 +85,9 @@ body.is-mobile #entry,body.is-mobile .pc{display:none}
 .m-top .brand-logo-img{height:30px}
 .pc-top .brand-logo-img{height:36px}
 #entry .brand-logo-img{height:54px;margin:0 auto 6px}
-.m-top .brand{display:flex;align-items:center;gap:10px}
+.m-top .brand{display:flex;align-items:center;gap:10px;min-height:36px}
 .m-top .logo{font-size:22px;color:var(--joinus-navy)}
-.m-top .sub{font-size:10px;letter-spacing:1.4px;color:var(--ink-soft);display:flex;align-items:center;line-height:1}
+.m-top .sub{font-size:10px;letter-spacing:1.4px;color:var(--ink-soft);display:flex;align-items:center;line-height:1;padding-top:2px}
 .m-top .home{border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);padding:8px 12px;border-radius:999px;font-size:12px}
 .m-tabs{
   position:sticky;top:60px;z-index:49;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
@@ -106,7 +106,7 @@ body.is-mobile #entry,body.is-mobile .pc{display:none}
 .lookup-row{display:flex;gap:10px;margin-top:14px;align-items:stretch;flex-wrap:nowrap}
 .lookup-row input,.lookup-row button,.f-group input[type="text"],.btn-submit{min-height:46px;border-radius:12px}
 .lookup-row input,.f-group input[type="text"]{flex:1;padding:0 14px;background:#fff;border:1px solid var(--line-strong)}
-.lookup-row button{padding:0 16px;border:0;background:var(--joinus-navy);color:#fff;font-weight:700;white-space:nowrap;flex:0 0 auto;min-width:84px}
+.lookup-row button{padding:0 16px;border:0;background:var(--joinus-navy);color:#fff;font-weight:700;white-space:nowrap;flex:0 0 auto;min-width:84px;font-family:'Noto Sans KR',sans-serif;font-size:15px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;letter-spacing:.02em}
 .result{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-strong);display:none}
 .result.show{display:block}
 .result .greet{
@@ -204,9 +204,9 @@ body.is-pc .pc{display:block}
 body.is-pc #entry,body.is-pc .mobile{display:none}
 body.is-pc{font-size:14px}
 .pc-top{position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 24px;background:rgba(255,255,255,.9);border-bottom:1px solid rgba(194,207,221,.8);backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(15,23,42,.04)}
-.pc-top .brand{display:flex;align-items:center;gap:12px}
+.pc-top .brand{display:flex;align-items:center;gap:12px;min-height:40px}
 .pc-top .logo{font-size:26px;color:var(--joinus-navy)}
-.pc-top .sub{font-size:11px;letter-spacing:1.4px;color:var(--joinus-blue);font-weight:700;display:flex;align-items:center;line-height:1}
+.pc-top .sub{font-size:11px;letter-spacing:1.4px;color:var(--joinus-blue);font-weight:700;display:flex;align-items:center;line-height:1;padding-top:2px}
 .pc-top .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pc-top .right .status{font-size:13px;font-weight:700;color:#0b66a8;margin-right:10px;padding:6px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;white-space:nowrap;font-family:'Noto Sans KR',sans-serif}
 .pc-top .right .status.saved{color:#047857;background:#ecfdf5;border-color:#a7f3d0}
@@ -375,12 +375,25 @@ body.is-pc{font-size:14px}
   .pc-meta-row .lbl{text-align:left;justify-self:start}
   .pc-time-range{grid-template-columns:1fr}
   .pc-time-range .sep{display:none}
-  .pc-top{padding:14px 16px;align-items:center}
-  .pc-top .right{width:100%;justify-content:flex-end}
-  .pc-main{padding:16px 16px 36px}
+  .pc-top{padding:12px 14px;align-items:center;flex-wrap:nowrap;overflow-x:auto}
+  .pc-top .right{width:100%;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+  .pc-top .right button{min-height:36px;padding:0 10px;font-size:12px}
+  .pc-top .right .status{font-size:11px;padding:4px 8px}
+  .pc-main{padding:12px 12px 28px;gap:14px}
+  .pc-card{padding:16px;border-radius:16px}
+  .pc-card h2{font-size:16px}
+  .pc-tasks{grid-template-columns:1fr}
+  .assigned-grid{grid-template-columns:1fr}
+  .pc-break{grid-template-columns:50px 1fr}
+  .edu-toolbar{flex-wrap:wrap;gap:3px;padding:6px}
+  .edu-toolbar button{min-width:32px;min-height:32px;padding:0 8px;font-size:12px}
+  .edu-toolbar input[type="number"]{width:60px;min-height:32px;font-size:12px}
+  .tag-input{min-height:42px;padding:6px 8px}
+  .tag-input .chip{padding:3px 8px 3px 10px;font-size:12px}
   .lookup-row button{min-width:76px;padding:0 12px}
   .m-tabs{grid-template-columns:repeat(4,1fr)}
   .ref-grid{grid-template-columns:1fr}
+  .ref-card img{height:140px}
 }
 @media print{
   @page{size:A4 portrait;margin:5mm}
@@ -1535,10 +1548,18 @@ function setupEduEditor(){
   });
 
   // 폰트 크기(px)
-  fontSize.addEventListener('change', ()=> applyFontSizePx(fontSize.value));
+  // 폰트 크기 실시간 반영
+  let fontTimer = null;
   fontSize.addEventListener('input', ()=>{
-    if(document.activeElement === fontSize) return;
-    fontSize.value = Math.max(8, Math.min(72, parseInt(fontSize.value || 14, 10) || 14));
+    clearTimeout(fontTimer);
+    fontTimer = setTimeout(()=>{
+      const val = parseInt(fontSize.value || 14, 10) || 14;
+      if(val >= 8 && val <= 72) applyFontSizePx(val);
+    }, 300);
+  });
+  fontSize.addEventListener('change', ()=>{
+    clearTimeout(fontTimer);
+    applyFontSizePx(fontSize.value);
   });
 
   // 입력
